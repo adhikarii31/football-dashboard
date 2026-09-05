@@ -62,103 +62,20 @@ def create_pass_network(team_df, ax):
             'location': lambda locs: (
                 sum(l[0] for l in locs) / len(locs),
                 sum(l[1] for l in locs) / len(locs)
-            ), 
+            ),
             'id': 'count'
         }).reset_index()
-        
+
         for _, passer in passers.iterrows():
             ax.scatter(passer['location'][1], passer['location'][0], s=passer['id'] * 8 + 20, c='red', edgecolors='black', zorder=3)
 
-def create_table(team1_df, team2_df):
-    def get_xg(df):
-        shots = df[df['type'] == 'Shot']
-        return round(shots['shot_statsbomb_xg'].sum(), 2) if 'shot_statsbomb_xg' in shots else 0.0
 
-    def get_passes(df):
-        passes = df[df['type'] == 'Pass']
-        acc = passes[passes['pass_outcome'].isna()]
-        pct = round((len(acc) / len(passes) * 100), 1) if len(passes) > 0 else 0
-        return len(passes), pct
+def create_momentum_xg(team1_df, team2_df, team1_name, team2_name):
+    fig, (ax_xg, ax_momentum) = plt.subplots(
+        2, 1, figsize=(14, 7), sharex=True, gridspec_kw={"height_ratios": [2, 1]}
+    )
 
-    t1_passes, t1_acc = get_passes(team1_df)
-    t2_passes, t2_acc = get_passes(team2_df)
-
-    data = [
-        ["Expected Goals (xG)", get_xg(team1_df), get_xg(team2_df)],
-        ["Shots", len(team1_df[team1_df['type'] == 'Shot']), len(team2_df[team2_df['type'] == 'Shot'])],
-        ["Passes", t1_passes, t2_passes],
-        ["Pass Completion %", f"{t1_acc}%", f"{t2_acc}%"]
-    ]
-    table = pd.DataFrame(data, columns=["Metric", "Team 1", "Team 2"])
-    table[["Team 1", "Team 2"]] = table[["Team 1", "Team 2"]].astype(str)
-    return table
-
-# ---------------------------------------------------------
-# SIDEBAR CONTROLS
-# ---------------------------------------------------------
-
-st.sidebar.title("Match Selector")
-
-comps = get_competitions()
-comp_names = comps['competition_name'].unique()
-selected_comp = st.sidebar.selectbox("Select Competition", comp_names)
-
-filtered_seasons = comps[comps['competition_name'] == selected_comp]
-season_names = filtered_seasons['season_name'].unique()
-selected_season = st.sidebar.selectbox("Select Season", season_names)
-
-comp_id = filtered_seasons[filtered_seasons['season_name'] == selected_season]['competition_id'].values[0]
-season_id = filtered_seasons[filtered_seasons['season_name'] == selected_season]['season_id'].values[0]
-
-matches = get_matches(comp_id, season_id)
-match_dict = {f"{m['home_team']} vs {m['away_team']} ({m['match_date']})": m['match_id'] for _, m in matches.iterrows()}
-selected_match_label = st.sidebar.selectbox("Select Match", list(match_dict.keys()))
-
-match_id = match_dict[selected_match_label]
-
-# ---------------------------------------------------------
-# MAIN DASHBOARD INTERFACE
-# ---------------------------------------------------------
-
-st.title("⚽ Match Analytics Dashboard")
-
-with st.spinner("Fetching event data from StatsBomb..."):
-    df = load_match_data(match_id)
-
-teams = df['team'].dropna().unique()
-
-if len(teams) >= 2:
-    team1_name, team2_name = teams[0], teams[1]
-    team1_df = df[df['team'] == team1_name]
-    team2_df = df[df['team'] == team2_name]
-
-    st.header(f"{team1_name} vs {team2_name}")
-
-    st.subheader("Match Summary")
-    stats_df = create_table(team1_df, team2_df)
-    stats_df.columns = ["Metric", team1_name, team2_name]
-    st.table(stats_df)
-
-    # Figure container with explicit white facecolors
-    fig = plt.figure(figsize=(15, 12), facecolor='white')
-    
-    ax_pass1 = fig.add_axes([0.05, 0.52, 0.4, 0.4], facecolor='white')
-    ax_pass2 = fig.add_axes([0.55, 0.52, 0.4, 0.4], facecolor='white')
-    ax_shot1 = fig.add_axes([0.05, 0.05, 0.4, 0.4], facecolor='white')
-    ax_shot2 = fig.add_axes([0.55, 0.05, 0.4, 0.4], facecolor='white')
-
-    ax_pass1.set_title(f"{team1_name} Pass Network", fontsize=14, color='black')
-    create_pass_network(team1_df, ax_pass1)
-
-    ax_pass2.set_title(f"{team2_name} Pass Network", fontsize=14, color='black')
-    create_pass_network(team2_df, ax_pass2)
-
-    ax_shot1.set_title(f"{team1_name} Shot Map", fontsize=14, color='black')
-    create_shotmap(team1_df, ax_shot1)
-
-    ax_shot2.set_title(f"{team2_name} Shot Map", fontsize=14, color='black')
-    create_shotmap(team2_df, ax_shot2)
-
-    st.pyplot(fig)
-else:
-    st.warning("Insufficient event data available for this match.")
+    def event_minutes(team_df):
+        minutes = team_df["minute"].fillna(0).astype(float)
+        seconds = team_df["second"].fillna(0).astype(float) if "second" in team_df else 0
+        return minutes + seconds / 60
