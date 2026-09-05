@@ -1,6 +1,6 @@
-matplotlib
 streamlit
 pandas
 numpy
-statsbombpy
+matplotlib
 mplsoccer
+statsbombpy
