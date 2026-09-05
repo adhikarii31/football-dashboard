@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from statsbombpy import sb
-import mplsoccer
+from mplsoccer import VerticalPitch
 # Page setup
 st.set_page_config(layout="wide", page_title="Football Match Analytics Dashboard")
 
@@ -89,7 +89,9 @@ def create_table(team1_df, team2_df):
         ["Passes", t1_passes, t2_passes],
         ["Pass Completion %", f"{t1_acc}%", f"{t2_acc}%"]
     ]
-    return pd.DataFrame(data, columns=["Metric", "Team 1", "Team 2"])
+    table = pd.DataFrame(data, columns=["Metric", "Team 1", "Team 2"])
+    table[["Team 1", "Team 2"]] = table[["Team 1", "Team 2"]].astype(str)
+    return table
 
 # ---------------------------------------------------------
 # SIDEBAR CONTROLS
