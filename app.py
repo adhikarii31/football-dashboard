@@ -1,4 +1,27 @@
+import subprocess
+import sys
+
+# Function to auto-install packages if missing
+def install_package(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# Force-install missing libraries at startup
+install_package("matplotlib")
+install_package("mplsoccer")
+install_package("statsbombpy")
+install_package("pandas")
+install_package("numpy")
+
+# Now load your standard imports safely
+import matplotlib.pyplot as plt
 import streamlit as st
+import pandas as pd
+import numpy as np
+import mplsoccer
+# ... rest of your code ...import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsbombpy import sb
